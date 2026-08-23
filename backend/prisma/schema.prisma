@@ -1,0 +1,107 @@
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+
+
+enum Role {
+  RESIDENT
+  ADMIN
+}
+
+enum Category {
+  PLUMBING
+  ELECTRICAL
+  CLEANING
+  SECURITY
+  LIFT
+  OTHER
+}
+
+enum Status {
+  OPEN
+  IN_PROGRESS
+  RESOLVED
+}
+
+enum Priority {
+  LOW
+  MEDIUM
+  HIGH
+}
+
+model User {
+  id              String         @id @default(uuid())
+  name            String
+  email           String         @unique
+  passwordHash    String
+  role            Role           @default(RESIDENT)
+  apartmentNumber String?
+  block           String?
+  createdAt       DateTime       @default(now())
+  updatedAt       DateTime       @updatedAt
+  
+  complaints      Complaint[]
+  noticesCreated  Notice[]       @relation("CreatedNotices")
+  notifications   Notification[]
+  actions         ComplaintHistory[] @relation("HistoryActor")
+}
+
+model Complaint {
+  id          String             @id @default(uuid())
+  title       String
+  description String
+  category    Category
+  status      Status             @default(OPEN)
+  priority    Priority           @default(MEDIUM)
+  photoUrl    String?
+  resolvedAt  DateTime?
+  createdAt   DateTime           @default(now())
+  updatedAt   DateTime           @updatedAt
+
+  residentId  String
+  resident    User               @relation(fields: [residentId], references: [id])
+  history     ComplaintHistory[]
+}
+
+model ComplaintHistory {
+  id          String   @id @default(uuid())
+  complaintId String
+  oldStatus   Status?  // Nullable because the very first creation has no old status
+  newStatus   Status
+  actorId     String
+  note        String?
+  createdAt   DateTime @default(now())
+
+  complaint   Complaint @relation(fields: [complaintId], references: [id])
+  actor       User      @relation("HistoryActor", fields: [actorId], references: [id])
+}
+
+model Notice {
+  id          String   @id @default(uuid())
+  title       String
+  content     String
+  isImportant Boolean  @default(false)
+  createdById String
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  createdBy   User     @relation("CreatedNotices", fields: [createdById], references: [id])
+}
+
+model Notification {
+  id        String   @id @default(uuid())
+  userId    String
+  type      String   
+  title     String
+  message   String
+  isRead    Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  user      User     @relation(fields: [userId], references: [id])
+}
