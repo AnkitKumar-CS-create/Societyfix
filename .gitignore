@@ -1,0 +1,12 @@
+# Dependencies
+node_modules/
+
+# Production Builds
+dist/
+build/
+
+# Environment variables (NEVER COMMIT REAL SECRETS)
+.env
+
+# OS files
+.DS_Store
