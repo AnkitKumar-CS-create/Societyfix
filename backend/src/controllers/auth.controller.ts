@@ -5,10 +5,22 @@ import { PrismaClient } from '@prisma/client';
 import { AuthRequest } from '../middleware/auth';
 
 const prisma = new PrismaClient();
+const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+const getCredentials = (body: Record<string, unknown>) => ({
+  email: typeof body.email === 'string' ? body.email.trim().toLowerCase() : '',
+  password: typeof body.password === 'string' ? body.password : '',
+});
 
 export const register = async (req: Request, res: Response): Promise<void> => {
   try {
-    const { name, email, password, apartmentNumber, block } = req.body;
+    const { name, apartmentNumber, block } = req.body;
+    const { email, password } = getCredentials(req.body);
+
+    if (typeof name !== 'string' || !name.trim() || !emailPattern.test(email) || password.length < 8) {
+      res.status(400).json({ message: 'Name, a valid email, and a password of at least 8 characters are required.' });
+      return;
+    }
 
     // 1. Check if user already exists
     const existingUser = await prisma.user.findUnique({ where: { email } });
@@ -23,7 +35,7 @@ export const register = async (req: Request, res: Response): Promise<void> => {
     // 3. Create the user in the database (Default role is RESIDENT)
     const newUser = await prisma.user.create({
       data: {
-        name,
+        name: name.trim(),
         email,
         passwordHash,
         apartmentNumber,
@@ -48,7 +60,7 @@ export const register = async (req: Request, res: Response): Promise<void> => {
 
 export const login = async (req: Request, res: Response): Promise<void> => {
   try {
-    const { email, password } = req.body;
+    const { email, password } = getCredentials(req.body);
 
     // 1. Find user
     const user = await prisma.user.findUnique({ where: { email } });
