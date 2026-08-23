@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useSearchParams } from 'react-router-dom';
 import api from '../services/api';
 import type { Complaint } from '../types';
 import { Plus, AlertCircle, Search, SlidersHorizontal, RotateCcw } from 'lucide-react';
@@ -9,11 +9,13 @@ const Complaints: React.FC = () => {
   const [complaints, setComplaints] = useState<Complaint[]>([]);
   const [loading, setLoading] = useState(true);
   const { user } = useAuth();
+  const [searchParams] = useSearchParams();
   const [search, setSearch] = useState('');
-  const [statusFilter, setStatusFilter] = useState('');
-  const [categoryFilter, setCategoryFilter] = useState('');
+  const [statusFilter, setStatusFilter] = useState(searchParams.get('status') || '');
+  const [categoryFilter, setCategoryFilter] = useState(searchParams.get('category') || '');
   const [fromDate, setFromDate] = useState('');
   const [toDate, setToDate] = useState('');
+  const [overdueOnly, setOverdueOnly] = useState(searchParams.get('overdue') === 'true');
 
   useEffect(() => {
     fetchComplaints();
@@ -48,8 +50,9 @@ const Complaints: React.FC = () => {
 
   const filteredComplaints = complaints.filter((complaint) => {
     const query = search.trim().toLowerCase();
-    return !query || complaint.title.toLowerCase().includes(query) ||
+    const matchesSearch = !query || complaint.title.toLowerCase().includes(query) ||
       complaint.resident?.name.toLowerCase().includes(query);
+    return matchesSearch && (!overdueOnly || complaint.isOverdue);
   });
 
   if (loading) return <div className="p-8 text-slate-500">Loading complaints...</div>;
@@ -104,7 +107,7 @@ const Complaints: React.FC = () => {
             <input type="date" value={toDate} onChange={(e) => setToDate(e.target.value)} aria-label="To date" className="rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm" />
             <button
               type="button"
-              onClick={() => { setSearch(''); setStatusFilter(''); setCategoryFilter(''); setFromDate(''); setToDate(''); }}
+              onClick={() => { setSearch(''); setStatusFilter(''); setCategoryFilter(''); setFromDate(''); setToDate(''); setOverdueOnly(false); }}
               className="inline-flex items-center justify-center gap-2 rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm font-medium text-slate-600 hover:bg-slate-100"
             >
               <RotateCcw className="h-4 w-4" /> Reset

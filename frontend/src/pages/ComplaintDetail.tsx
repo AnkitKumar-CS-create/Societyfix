@@ -3,7 +3,7 @@ import { useParams, Link } from 'react-router-dom';
 import api from '../services/api';
 import type { Complaint } from '../types';
 import { useAuth } from '../context/AuthContext';
-import { ArrowLeft, Clock, MessageSquare, AlertCircle } from 'lucide-react';
+import { ArrowLeft, Clock, MessageSquare, AlertCircle, CheckCircle2, Wrench } from 'lucide-react';
 
 const ComplaintDetail: React.FC = () => {
   const { id } = useParams<{ id: string }>();
@@ -51,6 +51,8 @@ const ComplaintDetail: React.FC = () => {
   if (loading) return <div className="p-8 text-slate-500">Loading details...</div>;
   if (!complaint) return <div className="p-8 text-red-500">Complaint not found.</div>;
 
+  const latestUpdate = complaint.history?.[complaint.history.length - 1];
+
   return (
     <div className="max-w-4xl mx-auto space-y-6">
       <Link to="/complaints" className="inline-flex items-center text-sm font-medium text-slate-500 hover:text-slate-900 transition">
@@ -79,6 +81,25 @@ const ComplaintDetail: React.FC = () => {
           {complaint.photoUrl && (
             <div className="mt-4 overflow-hidden rounded-xl border border-slate-200 bg-slate-100">
               <img src={complaint.photoUrl} alt="Complaint supporting evidence" className="max-h-96 w-full object-contain" />
+            </div>
+          )}
+          {complaint.status === 'RESOLVED' ? (
+            <div className="mt-4 flex items-start gap-3 rounded-xl border border-emerald-200 bg-emerald-50 p-4 text-emerald-900">
+              <CheckCircle2 className="mt-0.5 h-5 w-5 shrink-0 text-emerald-600" />
+              <div>
+                <p className="font-semibold">This issue has been resolved</p>
+                <p className="mt-1 text-sm text-emerald-800">
+                  {latestUpdate?.note || 'The maintenance team marked this complaint as complete.'}
+                </p>
+              </div>
+            </div>
+          ) : (
+            <div className="mt-4 flex items-start gap-3 rounded-xl border border-blue-200 bg-blue-50 p-4 text-blue-900">
+              <Wrench className="mt-0.5 h-5 w-5 shrink-0 text-blue-600" />
+              <div>
+                <p className="font-semibold">Your request is being tracked</p>
+                <p className="mt-1 text-sm text-blue-800">Management will add progress notes here as the issue moves toward resolution.</p>
+              </div>
             </div>
           )}
           {complaint.isOverdue && (
