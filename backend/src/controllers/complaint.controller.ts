@@ -1,6 +1,6 @@
 import { sendStatusUpdateEmail } from '../services/email.service';
 import { Response } from 'express';
-import { PrismaClient, Status, Priority } from '@prisma/client';
+import { PrismaClient, Status, Priority, Category, Prisma } from '@prisma/client';
 import { AuthRequest } from '../middleware/auth';
 import { isComplaintOverdue } from '../utils/overdue';
 
@@ -54,9 +54,29 @@ export const createComplaint = async (req: AuthRequest, res: Response): Promise<
 export const getComplaints = async (req: AuthRequest, res: Response): Promise<void> => {
   try {
     const { role, userId } = req.user!;
-    
-    // Determine query conditions based on role
-    const whereCondition = role === 'RESIDENT' ? { residentId: userId } : {};
+    const getQueryValue = (value: unknown): string | undefined =>
+      typeof value === 'string' ? value : undefined;
+    const status = getQueryValue(req.query.status);
+    const category = getQueryValue(req.query.category);
+    const from = getQueryValue(req.query.from);
+    const to = getQueryValue(req.query.to);
+
+    const whereCondition: Prisma.ComplaintWhereInput = role === 'RESIDENT'
+      ? { residentId: userId }
+      : {};
+
+    if (status && Object.values(Status).includes(status as Status)) {
+      whereCondition.status = status as Status;
+    }
+    if (category && Object.values(Category).includes(category as Category)) {
+      whereCondition.category = category as Category;
+    }
+    if (from || to) {
+      const createdAt: Prisma.DateTimeFilter = {};
+      if (from && !Number.isNaN(Date.parse(from))) createdAt.gte = new Date(from);
+      if (to && !Number.isNaN(Date.parse(to))) createdAt.lte = new Date(to);
+      whereCondition.createdAt = createdAt;
+    }
 
     const complaints = await prisma.complaint.findMany({
       where: whereCondition,
@@ -71,6 +91,10 @@ export const getComplaints = async (req: AuthRequest, res: Response): Promise<vo
       ...c,
       isOverdue: isComplaintOverdue(c.createdAt, c.status)
     }));
+
+    complaintsWithOverdue.sort((first, second) =>
+      Number(second.isOverdue) - Number(first.isOverdue)
+    );
 
     res.status(200).json(complaintsWithOverdue);
   } catch (error) {
@@ -154,12 +178,6 @@ export const updateComplaintStatus = async (req: AuthRequest, res: Response): Pr
 
     // Update complaint and create history log simultaneously
     const updatedComplaint = await prisma.$transaction(async (tx) => {
-        // Fetch resident's email to send notification
-    const resident = await prisma.user.findUnique({ where: { id: updatedComplaint.residentId } });
-    if (resident) {
-      // Fire and forget email notification
-      sendStatusUpdateEmail(resident.email, updatedComplaint.title, updatedComplaint.status, note);
-    }
       const updated = await tx.complaint.update({
         where: { id },
         data: { 
@@ -180,6 +198,11 @@ export const updateComplaintStatus = async (req: AuthRequest, res: Response): Pr
 
       return updated;
     });
+
+    const resident = await prisma.user.findUnique({ where: { id: updatedComplaint.residentId } });
+    if (resident) {
+      void sendStatusUpdateEmail(resident.email, updatedComplaint.title, updatedComplaint.status, note);
+    }
 
     res.status(200).json({ message: 'Status updated successfully', complaint: updatedComplaint });
   } catch (error) {
