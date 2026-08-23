@@ -76,6 +76,11 @@ const ComplaintDetail: React.FC = () => {
           <div className="bg-slate-50 p-4 rounded-xl text-slate-700 text-sm whitespace-pre-wrap border border-slate-100">
             {complaint.description}
           </div>
+          {complaint.photoUrl && (
+            <div className="mt-4 overflow-hidden rounded-xl border border-slate-200 bg-slate-100">
+              <img src={complaint.photoUrl} alt="Complaint supporting evidence" className="max-h-96 w-full object-contain" />
+            </div>
+          )}
           {complaint.isOverdue && (
             <div className="mt-4 flex items-center text-sm font-medium text-red-700 bg-red-50 p-3 rounded-lg border border-red-100">
               <AlertCircle className="h-5 w-5 mr-2" /> This complaint is overdue!
