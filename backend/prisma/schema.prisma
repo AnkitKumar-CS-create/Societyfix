@@ -50,6 +50,7 @@ model User {
   noticesCreated  Notice[]       @relation("CreatedNotices")
   notifications   Notification[]
   actions         ComplaintHistory[] @relation("HistoryActor")
+  comments        ComplaintComment[]
 }
 
 model Complaint {
@@ -67,6 +68,7 @@ model Complaint {
   residentId  String
   resident    User               @relation(fields: [residentId], references: [id])
   history     ComplaintHistory[]
+  comments    ComplaintComment[]
 }
 
 model ComplaintHistory {
@@ -80,6 +82,17 @@ model ComplaintHistory {
 
   complaint   Complaint @relation(fields: [complaintId], references: [id])
   actor       User      @relation("HistoryActor", fields: [actorId], references: [id])
+}
+
+model ComplaintComment {
+  id          String    @id @default(uuid())
+  complaintId String
+  authorId    String
+  message     String
+  createdAt   DateTime  @default(now())
+
+  complaint   Complaint @relation(fields: [complaintId], references: [id])
+  author      User      @relation(fields: [authorId], references: [id])
 }
 
 model Notice {

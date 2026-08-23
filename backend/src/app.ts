@@ -16,4 +16,8 @@ app.use('/api/complaints', complaintRoutes);
 app.use('/api/notices', noticeRoutes);
 app.use('/api/admin', adminRoutes);
 
+app.get('/api/health', (_req, res) => {
+	res.json({ status: 'ok' });
+});
+
 export default app;

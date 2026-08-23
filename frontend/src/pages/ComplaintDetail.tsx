@@ -3,7 +3,7 @@ import { useParams, Link } from 'react-router-dom';
 import api from '../services/api';
 import type { Complaint } from '../types';
 import { useAuth } from '../context/AuthContext';
-import { ArrowLeft, Clock, MessageSquare, AlertCircle, CheckCircle2, Wrench } from 'lucide-react';
+import { ArrowLeft, Clock, MessageSquare, AlertCircle, CheckCircle2, Wrench, Send } from 'lucide-react';
 
 const ComplaintDetail: React.FC = () => {
   const { id } = useParams<{ id: string }>();
@@ -15,6 +15,8 @@ const ComplaintDetail: React.FC = () => {
   const [newStatus, setNewStatus] = useState('');
   const [note, setNote] = useState('');
   const [updateLoading, setUpdateLoading] = useState(false);
+  const [commentMessage, setCommentMessage] = useState('');
+  const [commentLoading, setCommentLoading] = useState(false);
 
   useEffect(() => {
     fetchComplaint();
@@ -45,6 +47,22 @@ const ComplaintDetail: React.FC = () => {
       console.error('Failed to update status', error);
     } finally {
       setUpdateLoading(false);
+    }
+  };
+
+  const handleCommentSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!id || !commentMessage.trim()) return;
+
+    setCommentLoading(true);
+    try {
+      await api.post(`/complaints/${id}/comments`, { message: commentMessage });
+      setCommentMessage('');
+      await fetchComplaint();
+    } catch (error) {
+      console.error('Failed to add complaint comment', error);
+    } finally {
+      setCommentLoading(false);
     }
   };
 
@@ -102,6 +120,13 @@ const ComplaintDetail: React.FC = () => {
               </div>
             </div>
           )}
+          {latestUpdate?.note && complaint.status !== 'RESOLVED' && (
+            <div className="mt-4 rounded-xl border border-slate-200 bg-white p-4">
+              <p className="text-xs font-bold uppercase tracking-wider text-slate-400">Latest solution update</p>
+              <p className="mt-2 text-sm text-slate-700">{latestUpdate.note}</p>
+              <p className="mt-1 text-xs text-slate-400">Added by {latestUpdate.actor.name}</p>
+            </div>
+          )}
           {complaint.isOverdue && (
             <div className="mt-4 flex items-center text-sm font-medium text-red-700 bg-red-50 p-3 rounded-lg border border-red-100">
               <AlertCircle className="h-5 w-5 mr-2" /> This complaint is overdue!
@@ -135,6 +160,40 @@ const ComplaintDetail: React.FC = () => {
           </div>
         </div>
 
+        <div className="border-t border-slate-200 bg-white p-6">
+          <div className="mb-4 flex items-center justify-between gap-3">
+            <div>
+              <h3 className="flex items-center text-lg font-bold text-slate-900">
+                <MessageSquare className="mr-2 h-5 w-5 text-blue-600" /> Conversation
+              </h3>
+              <p className="mt-1 text-sm text-slate-500">Private replies between the resident and society admin.</p>
+            </div>
+          </div>
+          <div className="space-y-3">
+            {complaint.comments?.map((comment) => (
+              <div key={comment.id} className="rounded-xl border border-slate-200 bg-slate-50 p-3">
+                <div className="flex items-center justify-between gap-3">
+                  <p className="text-sm font-semibold text-slate-800">{comment.author.name} <span className="font-normal text-slate-400">({comment.author.role === 'ADMIN' ? 'Admin' : 'Resident'})</span></p>
+                  <p className="text-xs text-slate-400">{new Date(comment.createdAt).toLocaleString()}</p>
+                </div>
+                <p className="mt-1 text-sm text-slate-700">{comment.message}</p>
+              </div>
+            ))}
+            {!complaint.comments?.length && <p className="text-sm text-slate-500">No replies yet. Start the conversation below.</p>}
+          </div>
+          <form onSubmit={handleCommentSubmit} className="mt-4 flex flex-col gap-2 sm:flex-row">
+            <input
+              value={commentMessage}
+              onChange={(e) => setCommentMessage(e.target.value)}
+              placeholder="Ask a question or share an update..."
+              className="min-w-0 flex-1 rounded-lg border border-slate-300 px-3 py-2.5 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
+            />
+            <button type="submit" disabled={commentLoading || !commentMessage.trim()} className="inline-flex items-center justify-center gap-2 rounded-lg bg-blue-600 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50">
+              <Send className="h-4 w-4" /> {commentLoading ? 'Sending...' : 'Reply'}
+            </button>
+          </form>
+        </div>
+
         {/* Admin Action Section */}
         {user?.role === 'ADMIN' && complaint.status !== 'RESOLVED' && (
           <div className="p-6 border-t border-slate-200 bg-white">
@@ -153,13 +212,13 @@ const ComplaintDetail: React.FC = () => {
                 </select>
               </div>
               <div>
-                <label className="block text-sm font-medium text-slate-700 mb-1">Update Note (Optional)</label>
+                <label className="block text-sm font-medium text-slate-700 mb-1">Solution or progress note (Optional)</label>
                 <textarea 
                   value={note}
                   onChange={(e) => setNote(e.target.value)}
                   rows={2}
                   className="w-full border border-slate-300 rounded-lg p-2.5 text-sm focus:ring-blue-500 focus:border-blue-500"
-                  placeholder="Explain what was done..."
+                  placeholder="Explain the fix, action taken, or next step..."
                 />
               </div>
               <button 

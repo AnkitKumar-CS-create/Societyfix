@@ -121,6 +121,7 @@ const Complaints: React.FC = () => {
                 <th className="px-6 py-4 text-left text-xs font-bold text-slate-500 uppercase tracking-wider">Title & Resident</th>
                 <th className="px-6 py-4 text-left text-xs font-bold text-slate-500 uppercase tracking-wider">Status</th>
                 <th className="px-6 py-4 text-left text-xs font-bold text-slate-500 uppercase tracking-wider">Category</th>
+                <th className="px-6 py-4 text-left text-xs font-bold text-slate-500 uppercase tracking-wider">Latest solution</th>
                 <th className="px-6 py-4 text-left text-xs font-bold text-slate-500 uppercase tracking-wider">Date Created</th>
               </tr>
             </thead>
@@ -156,6 +157,9 @@ const Complaints: React.FC = () => {
                     {c.category}
                     <span className="ml-2 text-xs text-slate-400">{c.priority}</span>
                   </td>
+                  <td className="max-w-xs px-6 py-4 text-sm text-slate-600">
+                    {c.latestUpdate || (c.status === 'RESOLVED' ? 'Resolved without a note' : 'Awaiting maintenance update')}
+                  </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-500">
                     {new Date(c.createdAt).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' })}
                   </td>
@@ -163,7 +167,7 @@ const Complaints: React.FC = () => {
               ))}
               {filteredComplaints.length === 0 && (
                 <tr>
-                  <td colSpan={4} className="px-6 py-12 text-center text-slate-500">
+                  <td colSpan={5} className="px-6 py-12 text-center text-slate-500">
                     No complaints found.
                   </td>
                 </tr>

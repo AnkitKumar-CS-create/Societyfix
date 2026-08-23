@@ -18,6 +18,13 @@ export interface ComplaintHistory {
   actor: { name: string; role: string };
 }
 
+export interface ComplaintComment {
+  id: string;
+  message: string;
+  createdAt: string;
+  author: { name: string; role: string };
+}
+
 export interface Complaint {
   id: string;
   title: string;
@@ -32,6 +39,8 @@ export interface Complaint {
   isOverdue?: boolean;
   resident?: { name: string; apartmentNumber?: string; block?: string };
   history?: ComplaintHistory[];
+  comments?: ComplaintComment[];
+  latestUpdate?: string | null;
 }
 
 export interface Notice {

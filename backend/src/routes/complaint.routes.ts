@@ -4,7 +4,8 @@ import {
   getComplaints, 
   getComplaintById, 
   updateComplaintStatus,
-  updateComplaintPriority
+  updateComplaintPriority,
+  addComplaintComment
 } from '../controllers/complaint.controller';
 import { requireAuth, requireAdmin } from '../middleware/auth';
 
@@ -17,6 +18,7 @@ router.use(requireAuth);
 router.post('/', createComplaint);
 router.get('/', getComplaints);
 router.get('/:id', getComplaintById);
+router.post('/:id/comments', addComplaintComment);
 
 // Admin-only routes for management
 router.patch('/:id/status', requireAdmin, updateComplaintStatus);

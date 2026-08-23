@@ -14,7 +14,7 @@ SocietyFix is a maintenance tracker for apartment communities. Residents registe
 
 ### 1. Configure the database
 
-Copy `.env.example` to `.env` at the project root and set `DATABASE_URL`. The backend also reads `backend/.env`, so place the same database values there or run the backend with the root environment loaded.
+Copy `.env.example` to `backend/.env` and set `DATABASE_URL`. Prisma and the backend load environment variables from the backend project directory.
 
 Set a strong `JWT_SECRET`, `COMPLAINT_OVERDUE_DAYS`, and optional Resend values:
 
@@ -24,6 +24,8 @@ COMPLAINT_OVERDUE_DAYS=3
 RESEND_API_KEY=re_xxxxxxxxx
 EMAIL_FROM=SocietyFix <noreply@example.com>
 ```
+
+Copy `frontend/.env.example` to `frontend/.env` if the backend is not running on the default port.
 
 ### 2. Install dependencies
 
@@ -38,7 +40,7 @@ cd ../frontend && npm install
 
 ### 3. Start the applications
 
-The default backend port is `5001` because macOS commonly reserves port `5000` for Control Center.
+The default backend port is `5001`. You can change it with `PORT`; this avoids a common local port conflict on macOS but is not platform-specific.
 
 ```bash
 cd backend
@@ -89,3 +91,52 @@ npm run build
 ```
 
 The full system design is documented in [docs/system-design.md](docs/system-design.md).
+
+## Deployment
+
+The frontend and backend can both be deployed as separate Vercel projects on the free Hobby plan. The backend is a Vercel serverless Express function in `backend/api/[...route].ts`; it does not need a long-running Node server.
+
+### Deploy the backend to Vercel
+
+1. In Vercel, import this GitHub repository.
+2. Set the project root directory to `backend`.
+3. Keep the framework as **Other**.
+4. Vercel will use `backend/vercel.json` and the `api/[...route].ts` function.
+5. Add the backend environment variables below.
+6. Deploy and test `https://your-backend.vercel.app/api/health`.
+
+If Vercel asks for an output directory such as `public`, the project root is configured incorrectly. Set **Root Directory** to `backend`, leave **Output Directory** empty, and redeploy. The backend is a serverless API and does not produce a static `public` folder.
+
+The backend deployment runs `npx prisma generate`. Run `npx prisma migrate deploy` once against the production database before first use, from a trusted local terminal with the production `DATABASE_URL`.
+
+Backend environment variables:
+
+```env
+DATABASE_URL=your-production-postgresql-url
+JWT_SECRET=your-long-random-secret
+PORT=5001
+COMPLAINT_OVERDUE_DAYS=3
+RESEND_API_KEY=your-resend-key
+EMAIL_FROM=SocietyFix <noreply@your-domain.com>
+```
+
+### Deploy the frontend to Vercel
+
+1. Create a second Vercel project from the same repository.
+2. Set the project root directory to `frontend`.
+3. Build command: `npm run build`.
+4. Output directory: `dist`.
+5. Add the frontend environment variable below, using your deployed backend URL.
+6. Deploy.
+
+Frontend environment variable:
+
+```env
+VITE_BACKEND_URL=https://your-backend-host.example.com/api
+```
+
+Do not upload `.env` files, database credentials, or API keys to GitHub. Vercel injects environment variables into the deployed function at runtime.
+
+## Submission package
+
+The source package should include the application source, Prisma migrations, README, API documentation, system design, and interview guide. It should exclude `node_modules`, `.env`, build output, and generated local artifacts.

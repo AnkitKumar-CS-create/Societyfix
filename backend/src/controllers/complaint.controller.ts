@@ -81,7 +81,12 @@ export const getComplaints = async (req: AuthRequest, res: Response): Promise<vo
     const complaints = await prisma.complaint.findMany({
       where: whereCondition,
       include: {
-        resident: { select: { name: true, apartmentNumber: true, block: true } }
+        resident: { select: { name: true, apartmentNumber: true, block: true } },
+        history: {
+          orderBy: { createdAt: 'desc' },
+          take: 1,
+          select: { note: true }
+        }
       },
       orderBy: { createdAt: 'desc' }
     });
@@ -89,6 +94,7 @@ export const getComplaints = async (req: AuthRequest, res: Response): Promise<vo
     // Calculate overdue status dynamically for each complaint
     const complaintsWithOverdue = complaints.map(c => ({
       ...c,
+      latestUpdate: c.history[0]?.note || null,
       isOverdue: isComplaintOverdue(c.createdAt, c.status)
     }));
 
@@ -121,6 +127,10 @@ export const getComplaintById = async (req: AuthRequest, res: Response): Promise
         history: {
           include: { actor: { select: { name: true, role: true } } },
           orderBy: { createdAt: 'asc' } // Oldest to newest for visual timeline
+        },
+        comments: {
+          include: { author: { select: { name: true, role: true } } },
+          orderBy: { createdAt: 'asc' }
         }
       }
     });
@@ -145,6 +155,51 @@ export const getComplaintById = async (req: AuthRequest, res: Response): Promise
   } catch (error) {
     console.error(error);
     res.status(500).json({ message: 'Server error fetching complaint details.' });
+  }
+};
+
+export const addComplaintComment = async (req: AuthRequest, res: Response): Promise<void> => {
+  try {
+    const { id } = req.params;
+    const authorId = req.user?.userId;
+    const message = typeof req.body.message === 'string' ? req.body.message.trim() : '';
+
+    if (typeof id !== 'string' || !id || !authorId || !message) {
+      res.status(400).json({ message: 'A valid complaint ID and message are required.' });
+      return;
+    }
+
+    const complaint = await prisma.complaint.findUnique({ where: { id }, select: { residentId: true } });
+    if (!complaint) {
+      res.status(404).json({ message: 'Complaint not found.' });
+      return;
+    }
+    if (req.user?.role === 'RESIDENT' && complaint.residentId !== authorId) {
+      res.status(403).json({ message: 'Access denied.' });
+      return;
+    }
+
+    const comment = await prisma.complaintComment.create({
+      data: { complaintId: id, authorId, message },
+      include: { author: { select: { name: true, role: true } } }
+    });
+
+    const recipientId = authorId === complaint.residentId ? undefined : complaint.residentId;
+    if (recipientId) {
+      await prisma.notification.create({
+        data: {
+          userId: recipientId,
+          type: 'COMPLAINT_COMMENT',
+          title: 'New complaint reply',
+          message: `${comment.author.name} replied to your complaint.`
+        }
+      });
+    }
+
+    res.status(201).json(comment);
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: 'Server error adding complaint comment.' });
   }
 };
 
