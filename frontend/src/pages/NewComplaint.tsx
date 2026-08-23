@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import api from '../services/api';
-import { ArrowLeft } from 'lucide-react';
+import { ArrowLeft, ImagePlus, X } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
 const NewComplaint: React.FC = () => {
@@ -31,6 +31,23 @@ const NewComplaint: React.FC = () => {
     } finally {
       setLoading(false);
     }
+  };
+
+  const handlePhotoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (!file.type.startsWith('image/')) {
+      setError('Please choose an image file.');
+      return;
+    }
+    if (file.size > 5 * 1024 * 1024) {
+      setError('Please choose an image smaller than 5 MB.');
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = () => setPhotoUrl(typeof reader.result === 'string' ? reader.result : '');
+    reader.readAsDataURL(file);
   };
 
   return (
@@ -72,8 +89,8 @@ const NewComplaint: React.FC = () => {
               <option value="PLUMBING">Plumbing</option>
               <option value="ELECTRICAL">Electrical</option>
               <option value="SECURITY">Security</option>
-              <option value="HOUSEKEEPING">Housekeeping</option>
-              <option value="MAINTENANCE">Maintenance</option>
+              <option value="CLEANING">Cleaning</option>
+              <option value="LIFT">Lift</option>
               <option value="OTHER">Other</option>
             </select>
           </div>
@@ -91,14 +108,21 @@ const NewComplaint: React.FC = () => {
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-slate-700 mb-1">Photo URL (Optional)</label>
-            <input
-              type="url"
-              placeholder="https://example.com/photo.jpg"
-              className="w-full border border-slate-300 rounded-lg p-2.5 text-sm focus:ring-blue-500 focus:border-blue-500"
-              value={photoUrl}
-              onChange={(e) => setPhotoUrl(e.target.value)}
-            />
+            <label className="block text-sm font-medium text-slate-700 mb-1">Supporting photo (Optional)</label>
+            {!photoUrl ? (
+              <label className="flex cursor-pointer items-center justify-center gap-2 rounded-xl border-2 border-dashed border-slate-300 bg-slate-50 px-4 py-6 text-sm font-medium text-slate-600 transition hover:border-blue-400 hover:bg-blue-50">
+                <ImagePlus className="h-5 w-5 text-blue-600" /> Add a photo
+                <input type="file" accept="image/*" onChange={handlePhotoChange} className="sr-only" />
+              </label>
+            ) : (
+              <div className="relative overflow-hidden rounded-xl border border-slate-200 bg-slate-50">
+                <img src={photoUrl} alt="Complaint preview" className="max-h-56 w-full object-cover" />
+                <button type="button" onClick={() => setPhotoUrl('')} className="absolute right-2 top-2 rounded-full bg-slate-900/80 p-2 text-white hover:bg-slate-900" aria-label="Remove photo">
+                  <X className="h-4 w-4" />
+                </button>
+              </div>
+            )}
+            <p className="mt-1 text-xs text-slate-400">JPG, PNG, or WEBP up to 5 MB</p>
           </div>
 
           <div className="flex justify-end gap-3 pt-4 border-t border-slate-100">
